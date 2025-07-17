@@ -1,0 +1,218 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 *&---------------------------------------------------------------------*\
+*& Report  ZTR_PROJ_ALV\
+*&---------------------------------------------------------------------*\
+REPORT ZTR_PROJ_ALV.\
+\
+TABLES: ZPROJ_ALV01, ZPROJ_ALV02.\
+\
+TYPES: BEGIN OF TY_ALV01,\
+         ID_REGISTRO   TYPE ZPROJ_ALV01-ID_REGISTRO,\
+         DESC_REGISTRO TYPE ZPROJ_ALV01-DESC_REGISTRO,\
+       END OF TY_ALV01.\
+\
+DATA: GT_ALV01 TYPE STANDARD TABLE OF TY_ALV01.\
+\
+TYPES: BEGIN OF TY_ALV02,\
+         CODIGO_ITEM TYPE ZPROJ_ALV02-CODIGO_ITEM,\
+         NOME_ITEM   TYPE ZPROJ_ALV02-NOME_ITEM,\
+       END OF TY_ALV02.\
+\
+DATA: GT_ALV02 TYPE STANDARD TABLE OF TY_ALV02.\
+\
+DATA: GT_EVENTS   TYPE SLIS_T_EVENT,\
+      GS_EVENTS   TYPE SLIS_ALV_EVENT,\
+      GT_FIELDCAT TYPE SLIS_T_FIELDCAT_ALV,\
+      GS_FIELDCAT TYPE SLIS_FIELDCAT_ALV,\
+      GS_ALV01    TYPE TY_ALV01,\
+      GS_ALV02    TYPE TY_ALV02,\
+      GS_LAYOUT   TYPE SLIS_LAYOUT_ALV.\
+\
+*----------------------------\
+* Tela de sele\'e7\'e3o estruturada\
+*----------------------------\
+SELECTION-SCREEN BEGIN OF BLOCK B01 WITH FRAME TITLE TEXT-001.\
+\
+PARAMETERS: P_TAB1 RADIOBUTTON GROUP GP1 DEFAULT 'X' USER-COMMAND SEL,\
+            P_TAB2 RADIOBUTTON GROUP GP1.\
+\
+SELECT-OPTIONS: S_ID  FOR ZPROJ_ALV01-ID_REGISTRO,\
+                S_COD FOR ZPROJ_ALV02-CODIGO_ITEM.\
+\
+SELECTION-SCREEN END OF BLOCK B01.\
+\
+SELECTION-SCREEN BEGIN OF BLOCK B02 WITH FRAME TITLE TEXT-002.\
+PARAMETERS: P_VARIAN TYPE SLIS_VARI.\
+SELECTION-SCREEN END OF BLOCK B02.\
+\
+*----------------------------\
+* Ajuda de valor para variante\
+*----------------------------\
+AT SELECTION-SCREEN ON VALUE-REQUEST FOR P_VARIAN.\
+\
+  DATA: LV_REPORT  TYPE SY-REPID VALUE SY-REPID,\
+        LV_VARIANT TYPE DISVARIANT.\
+\
+  LV_VARIANT-REPORT = LV_REPORT.\
+\
+  TRY.\
+      CALL FUNCTION 'REUSE_ALV_VARIANT_F4'\
+        EXPORTING\
+          IS_VARIANT = LV_VARIANT\
+        IMPORTING\
+          ES_VARIANT = LV_VARIANT.\
+\
+      P_VARIAN = LV_VARIANT-VARIANT.\
+\
+    CATCH CX_ROOT INTO DATA(LX_ERROR).\
+      MESSAGE LX_ERROR->GET_TEXT( ) TYPE 'E'.\
+  ENDTRY.\
+\
+*----------------------------\
+* In\'edcio da execu\'e7\'e3o\
+*----------------------------\
+START-OF-SELECTION.\
+\
+  PERFORM CARREGAR_DADOS.\
+  PERFORM PREPARAR_FIELDCAT.\
+  PERFORM EXIBIR_ALV.\
+\
+*---------------------------------------------------------------------*\
+*        Form CARREGAR_DADOS\
+*---------------------------------------------------------------------*\
+FORM CARREGAR_DADOS.\
+\
+  CLEAR: GT_ALV01, GT_ALV02.\
+\
+  IF P_TAB1 = 'X'.\
+    SELECT ID_REGISTRO, DESC_REGISTRO\
+      FROM ZPROJ_ALV01\
+      INTO TABLE @GT_ALV01\
+      WHERE ID_REGISTRO IN @S_ID.\
+\
+    IF GT_ALV01 IS INITIAL.\
+      MESSAGE 'Nenhum dado encontrado na tabela ZPROJ_ALV01' TYPE 'I'.\
+    ENDIF.\
+\
+  ELSE.\
+    SELECT CODIGO_ITEM, NOME_ITEM\
+      FROM ZPROJ_ALV02\
+      INTO TABLE @GT_ALV02\
+      WHERE CODIGO_ITEM IN @S_COD.\
+\
+    IF GT_ALV02 IS INITIAL.\
+      MESSAGE 'Nenhum dado encontrado na tabela ZPROJ_ALV02' TYPE 'I'.\
+    ENDIF.\
+\
+  ENDIF.\
+\
+ENDFORM.\
+\
+*---------------------------------------------------------------------*\
+*        Form PREPARAR_FIELDCAT\
+*---------------------------------------------------------------------*\
+FORM PREPARAR_FIELDCAT.\
+\
+  CLEAR GT_FIELDCAT.\
+\
+  IF P_TAB1 = 'X'.\
+    CLEAR GS_FIELDCAT.\
+    GS_FIELDCAT-FIELDNAME = 'ID_REGISTRO'.\
+    GS_FIELDCAT-SELTEXT_M = 'ID'.\
+    APPEND GS_FIELDCAT TO GT_FIELDCAT.\
+\
+    CLEAR GS_FIELDCAT.\
+    GS_FIELDCAT-FIELDNAME = 'DESC_REGISTRO'.\
+    GS_FIELDCAT-SELTEXT_M = 'DESCRI\'c7\'c3O'.\
+    APPEND GS_FIELDCAT TO GT_FIELDCAT.\
+\
+  ELSE.\
+    CLEAR GS_FIELDCAT.\
+    GS_FIELDCAT-FIELDNAME = 'CODIGO_ITEM'.\
+    GS_FIELDCAT-SELTEXT_M = 'C\'d3DIGO'.\
+    APPEND GS_FIELDCAT TO GT_FIELDCAT.\
+\
+    CLEAR GS_FIELDCAT.\
+    GS_FIELDCAT-FIELDNAME = 'NOME_ITEM'.\
+    GS_FIELDCAT-SELTEXT_M = 'NOME'.\
+    APPEND GS_FIELDCAT TO GT_FIELDCAT.\
+\
+  ENDIF.\
+\
+ENDFORM.\
+\
+*---------------------------------------------------------------------*\
+*        Form EXIBIR_ALV\
+*---------------------------------------------------------------------*\
+FORM EXIBIR_ALV.\
+\
+  DATA: LS_VARIANT TYPE DISVARIANT.\
+  LS_VARIANT-REPORT  = SY-REPID.\
+  LS_VARIANT-VARIANT = P_VARIAN.\
+\
+  GS_LAYOUT-ZEBRA = 'X'.\
+\
+  CLEAR GS_EVENTS.\
+  GS_EVENTS-NAME = 'USER_COMMAND'.\
+  GS_EVENTS-FORM = 'CLIQUE_LINHA'.\
+  APPEND GS_EVENTS TO GT_EVENTS.\
+\
+  IF P_TAB1 = 'X'.\
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'\
+      EXPORTING\
+        I_CALLBACK_PROGRAM = SY-REPID\
+        IS_LAYOUT          = GS_LAYOUT\
+        IT_FIELDCAT        = GT_FIELDCAT\
+        IT_EVENTS          = GT_EVENTS\
+        I_SAVE             = 'A'\
+        IS_VARIANT         = LS_VARIANT\
+      TABLES\
+        T_OUTTAB           = GT_ALV01.\
+  ELSE.\
+    CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'\
+      EXPORTING\
+        I_CALLBACK_PROGRAM = SY-REPID\
+        IS_LAYOUT          = GS_LAYOUT\
+        IT_FIELDCAT        = GT_FIELDCAT\
+        IT_EVENTS          = GT_EVENTS\
+        I_SAVE             = 'A'\
+        IS_VARIANT         = LS_VARIANT\
+      TABLES\
+        T_OUTTAB           = GT_ALV02.\
+  ENDIF.\
+\
+ENDFORM.\
+\
+*---------------------------------------------------------------------*\
+*        Form CLIQUE_LINHA\
+*---------------------------------------------------------------------*\
+FORM CLIQUE_LINHA USING R_UCOMM     LIKE SY-UCOMM\
+                        RS_SELFIELD TYPE SLIS_SELFIELD.\
+\
+  DATA: LV_MSG TYPE STRING.\
+\
+  IF R_UCOMM = '&IC1'. " Clique duplo\
+    IF P_TAB1 = 'X'.\
+      READ TABLE GT_ALV01 INTO GS_ALV01 INDEX RS_SELFIELD-TABINDEX.\
+      IF SY-SUBRC = 0.\
+        LV_MSG = |[ZPROJ_ALV01] ID: \{ GS_ALV01-ID_REGISTRO \} - \{ GS_ALV01-DESC_REGISTRO \}|.\
+      ENDIF.\
+    ELSE.\
+      READ TABLE GT_ALV02 INTO GS_ALV02 INDEX RS_SELFIELD-TABINDEX.\
+      IF SY-SUBRC = 0.\
+        LV_MSG = |[ZPROJ_ALV02] C\'f3d: \{ GS_ALV02-CODIGO_ITEM \} - \{ GS_ALV02-NOME_ITEM \}|.\
+      ENDIF.\
+    ENDIF.\
+\
+    IF LV_MSG IS NOT INITIAL.\
+      MESSAGE LV_MSG TYPE 'I'.\
+    ENDIF.\
+  ENDIF.\
+\
+ENDFORM.}
